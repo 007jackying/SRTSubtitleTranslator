@@ -1,20 +1,46 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Gemini SRT Translator 🎬
 
-# Run and deploy your AI Studio app
+A modern, high-performance web application designed to automatically translate Japanese `.srt` subtitles into Simplified Chinese using Google's state-of-the-art **Gemini 3 Pro** model.
 
-This contains everything you need to run your app locally.
+> ✨ **Note:** This project was **vibe coded** with AI assistance. It prioritizes aesthetics, smooth UI/UX, and getting things done.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1q4giT6sdaIciDtroJGwfkWw6lPWfX_78
+## Features
 
-## Run Locally
+- **🚀 Concurrent Batch Processing**: Upload multiple SRT files at once. The app intelligently manages a queue, processing up to 3 files concurrently to maximize throughput without hitting rate limits.
+- **✨ High-Quality Translation**: leverages the `gemini-3-pro-preview` model for nuanced, context-aware translations that respect subtitle formatting.
+- **📝 Live Editor**: Review and edit translations in real-time as they stream in.
+- **⏯️ Control Flow**: Stop specific jobs or halt the entire queue with a single click.
+- **🔒 Secure**: Your API key is stored locally in your browser and never sent to our servers.
+- **🎨 Modern UI**: Built with React, Tailwind CSS, and a dash of dark mode elegance.
 
-**Prerequisites:**  Node.js
+## Tech Stack
 
+- **Frontend**: React 19, TypeScript, Vite (implied)
+- **Styling**: Tailwind CSS
+- **AI Integration**: Google GenAI SDK (`@google/genai`)
+- **State Management**: React Hooks & Refs
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Getting Started
+
+1. **Clone the repo**
+   ```bash
+   git clone https://github.com/yourusername/gemini-srt-translator.git
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Run the development server**
+   ```bash
+   npm run dev
+   ```
+
+4. **Get an API Key**
+   - Visit [Google AI Studio](https://aistudio.google.com/app/apikey) to generate a free Gemini API key.
+   - Paste it into the app when prompted.
+
+## License
+
+MIT
