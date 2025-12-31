@@ -33,7 +33,11 @@ export const translateBatch = async (texts: string[], apiKey: string): Promise<s
       }
     });
 
-    const jsonStr = response.text || "[]";
+    let jsonStr = response.text || "[]";
+    
+    // Clean up potential markdown formatting if the model adds it despite config
+    jsonStr = jsonStr.replace(/^```json\s*/, '').replace(/^```\s*/, '').replace(/\s*```$/, '');
+
     const translatedArray = JSON.parse(jsonStr);
 
     if (Array.isArray(translatedArray)) {
