@@ -38,7 +38,7 @@ function App() {
     if (slotsAvailable > 0 && pendingJobs.length > 0) {
       const jobsToStart = pendingJobs.slice(0, slotsAvailable);
       jobsToStart.forEach(job => {
-        startJob(job.id);
+        startJob(job);
       });
     }
   }, [jobs, apiKey]); // Re-run when jobs list updates
@@ -102,50 +102,44 @@ function App() {
     setJobs(prev => prev.map(j => j.id === id ? { ...j, ...updates } : j));
   };
 
-  const startJob = async (jobId: string) => {
+  const startJob = async (job: FileJob) => {
     const key = localStorage.getItem('gemini_api_key');
     if (!key) return;
 
-    activeJobsRef.current.add(jobId);
+    activeJobsRef.current.add(job.id);
     
     // 1. Parsing Phase
-    updateJobState(jobId, { status: JobStatus.PARSING });
+    updateJobState(job.id, { status: JobStatus.PARSING });
     
-    let currentJob: FileJob | undefined;
-    setJobs(prev => {
-        currentJob = prev.find(j => j.id === jobId);
-        return prev;
-    });
-
-    if (!currentJob) {
-        activeJobsRef.current.delete(jobId);
-        return;
-    }
-
+    // Use the passed job object directly instead of trying to fetch it from state asynchronously
     const reader = new FileReader();
     reader.onload = async (e) => {
       if (stopRef.current) {
-          updateJobState(jobId, { status: JobStatus.STOPPED });
-          activeJobsRef.current.delete(jobId);
+          updateJobState(job.id, { status: JobStatus.STOPPED });
+          activeJobsRef.current.delete(job.id);
           return;
       }
 
       const content = e.target?.result as string;
       if (content) {
         const parsed = parseSRT(content);
-        updateJobState(jobId, { 
+        updateJobState(job.id, { 
             status: JobStatus.TRANSLATING, 
             subtitles: parsed 
         });
         
         // 2. Translating Phase
-        await processTranslationLoop(jobId, parsed, key, currentJob!.targetLanguage);
+        await processTranslationLoop(job.id, parsed, key, job.targetLanguage);
       } else {
-        updateJobState(jobId, { status: JobStatus.ERROR, error: 'Empty file' });
-        activeJobsRef.current.delete(jobId);
+        updateJobState(job.id, { status: JobStatus.ERROR, error: 'Empty file' });
+        activeJobsRef.current.delete(job.id);
       }
     };
-    reader.readAsText(currentJob.file);
+    reader.onerror = () => {
+        updateJobState(job.id, { status: JobStatus.ERROR, error: 'Failed to read file' });
+        activeJobsRef.current.delete(job.id);
+    };
+    reader.readAsText(job.file);
   };
 
   const processTranslationLoop = async (jobId: string, items: SubtitleItem[], apiKey: string, lang: string) => {
@@ -153,6 +147,13 @@ function App() {
     const total = items.length;
     // Work on a local copy of items to accumulate results, but we must update state frequently for UI
     const localItems = [...items];
+
+    // If file is empty or no items parsed
+    if (total === 0) {
+        updateJobState(jobId, { status: JobStatus.COMPLETED, progress: 100 });
+        activeJobsRef.current.delete(jobId);
+        return;
+    }
 
     for (let i = 0; i < total; i += BATCH_SIZE) {
       if (stopRef.current) {
@@ -196,6 +197,8 @@ function App() {
 
       } catch (err) {
         console.error(`Batch failed for job ${jobId}`, err);
+        // On error, we might want to continue or stop? For now, we continue but stats might look weird if we don't handle it.
+        // We'll just leave the original text if translation fails (handled in service, but service returns [FAILED] or original).
       }
     }
 
