@@ -3,6 +3,7 @@ import { Header } from './components/Header';
 import { FileUpload } from './components/FileUpload';
 import { JobCard } from './components/JobCard';
 import { ApiKeyInput } from './components/ApiKeyInput';
+import { LanguageSelector } from './components/LanguageSelector';
 import { parseSRT } from './utils/srtParser';
 import { translateBatch } from './services/geminiService';
 import { SubtitleItem, FileJob, JobStatus } from './types';
@@ -13,6 +14,7 @@ const MAX_CONCURRENT_JOBS = 3;
 function App() {
   const [jobs, setJobs] = useState<FileJob[]>([]);
   const [apiKey, setApiKey] = useState<string | null>(null);
+  const [targetLanguage, setTargetLanguage] = useState<string>('Simplified Chinese');
   
   // Ref to track which jobs are currently running to manage concurrency
   const activeJobsRef = useRef<Set<string>>(new Set());
@@ -61,7 +63,8 @@ function App() {
       status: JobStatus.PENDING,
       subtitles: [],
       progress: 0,
-      currentLineId: 0
+      currentLineId: 0,
+      targetLanguage: targetLanguage // Bake in the current language setting
     }));
 
     setJobs(prev => [...prev, ...newJobs]);
@@ -108,17 +111,12 @@ function App() {
     // 1. Parsing Phase
     updateJobState(jobId, { status: JobStatus.PARSING });
     
-    // Get the file from state (safest way to ensure we have the file object)
-    // We need to use a functional state update or just read from the jobs passed to this closure scope? 
-    // Actually, reading from state inside async func might be stale. 
-    // Let's pass the file object or find it.
     let currentJob: FileJob | undefined;
     setJobs(prev => {
         currentJob = prev.find(j => j.id === jobId);
         return prev;
     });
 
-    // Wait for state to reflect or just grab it from the find result above
     if (!currentJob) {
         activeJobsRef.current.delete(jobId);
         return;
@@ -141,7 +139,7 @@ function App() {
         });
         
         // 2. Translating Phase
-        await processTranslationLoop(jobId, parsed, key);
+        await processTranslationLoop(jobId, parsed, key, currentJob!.targetLanguage);
       } else {
         updateJobState(jobId, { status: JobStatus.ERROR, error: 'Empty file' });
         activeJobsRef.current.delete(jobId);
@@ -150,7 +148,7 @@ function App() {
     reader.readAsText(currentJob.file);
   };
 
-  const processTranslationLoop = async (jobId: string, items: SubtitleItem[], apiKey: string) => {
+  const processTranslationLoop = async (jobId: string, items: SubtitleItem[], apiKey: string, lang: string) => {
     let processedCount = 0;
     const total = items.length;
     // Work on a local copy of items to accumulate results, but we must update state frequently for UI
@@ -170,7 +168,7 @@ function App() {
       const textsToTranslate = batch.map(b => b.originalText);
       
       try {
-        const translations = await translateBatch(textsToTranslate, apiKey);
+        const translations = await translateBatch(textsToTranslate, apiKey, lang);
         
         for (let j = 0; j < batch.length; j++) {
            const originalIndex = i + j;
@@ -205,9 +203,6 @@ function App() {
         updateJobState(jobId, { status: JobStatus.COMPLETED, progress: 100 });
     }
     activeJobsRef.current.delete(jobId);
-    
-    // Trigger another pass of the useEffect queue check by updating jobs implicitly via the functions above
-    // or strictly toggling a dummy state if needed, but setJobs does it.
   };
 
   const hasActiveJobs = jobs.some(j => j.status === JobStatus.TRANSLATING || j.status === JobStatus.PENDING || j.status === JobStatus.PARSING);
@@ -228,10 +223,16 @@ function App() {
                     Batch Subtitle Translator
                   </h2>
                   <p className="text-lg text-slate-400 max-w-2xl mx-auto leading-relaxed">
-                    Translate multiple Japanese SRT files to Simplified Chinese concurrently.
+                    Translate multiple SRT files automatically. 
+                    <br/>
+                    <span className="text-indigo-400">Auto-detects source</span> language.
                   </p>
                 </div>
-                <FileUpload onFileSelect={handleFilesSelect} />
+                <FileUpload 
+                  onFileSelect={handleFilesSelect} 
+                  targetLanguage={targetLanguage}
+                  onLanguageChange={setTargetLanguage}
+                />
               </div>
             ) : (
               <div className="space-y-8 animate-fade-in-up">
@@ -244,17 +245,14 @@ function App() {
                             Processing {activeJobsRef.current.size} active (Max {MAX_CONCURRENT_JOBS}) • {jobs.length} total files
                         </p>
                     </div>
-                    <div className="flex gap-3">
-                         {hasActiveJobs && (
-                            <button 
-                                onClick={handleStopAll}
-                                className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-lg transition-colors text-sm font-medium"
-                            >
-                                Stop All
-                            </button>
-                         )}
-                         {/* Hidden input hack to allow adding more files */}
-                         <label className="cursor-pointer px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors text-sm font-medium shadow-lg shadow-indigo-500/20">
+                    <div className="flex items-end gap-3">
+                         <LanguageSelector 
+                            value={targetLanguage}
+                            onChange={setTargetLanguage}
+                            className="w-48"
+                         />
+                         
+                         <label className="cursor-pointer px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors text-sm font-medium shadow-lg shadow-indigo-500/20 h-[38px] flex items-center mt-6">
                             Add Files
                             <input 
                                 type="file" 
@@ -267,6 +265,15 @@ function App() {
                                 }} 
                             />
                          </label>
+                         
+                         {hasActiveJobs && (
+                            <button 
+                                onClick={handleStopAll}
+                                className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-lg transition-colors text-sm font-medium h-[38px] mt-6"
+                            >
+                                Stop All
+                            </button>
+                         )}
                     </div>
                 </div>
 

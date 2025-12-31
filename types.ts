@@ -29,6 +29,7 @@ export interface FileJob {
   subtitles: SubtitleItem[];
   progress: number;
   currentLineId: number;
+  targetLanguage: string;
   error?: string;
 }
 

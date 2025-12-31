@@ -3,14 +3,15 @@ import { GoogleGenAI, Type } from "@google/genai";
 // Using Pro for best quality on complex translation tasks
 const MODEL_NAME = 'gemini-3-pro-preview'; 
 
-export const translateBatch = async (texts: string[], apiKey: string): Promise<string[]> => {
+export const translateBatch = async (texts: string[], apiKey: string, targetLanguage: string): Promise<string[]> => {
   // Initialize AI with the provided key for this batch request
   const ai = new GoogleGenAI({ apiKey });
 
   try {
     const prompt = `
       You are a professional subtitle translator. 
-      Translate the following array of Japanese subtitle texts into Simplified Chinese.
+      Translate the following array of subtitle texts into ${targetLanguage}.
+      Detect the source language automatically.
       Maintain the nuance, tone, and brevity suitable for subtitles.
       Return ONLY a JSON array of strings corresponding strictly to the input order.
       Do not merge lines. The output array length must match the input array length.
