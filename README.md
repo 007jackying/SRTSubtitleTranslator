@@ -1,5 +1,8 @@
 # Gemini SRT Translator 🎬
 
+[Demo link
+](https://srt-subtitle-translator.vercel.app/)
+
 A modern, high-performance web application designed to automatically translate Japanese `.srt` subtitles into Simplified Chinese using Google's state-of-the-art **Gemini 3 Pro** model.
 
 > ✨ **Note:** This project was **vibe coded** with AI assistance. It prioritizes aesthetics, smooth UI/UX, and getting things done.
