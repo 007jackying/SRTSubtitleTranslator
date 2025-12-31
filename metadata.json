@@ -1,0 +1,5 @@
+{
+  "name": "Gemini SRT Translator",
+  "description": "Professional tool to translate Japanese SRT subtitles to Chinese using Google's state-of-the-art Gemini 3 Pro model.",
+  "requestFramePermissions": []
+}
