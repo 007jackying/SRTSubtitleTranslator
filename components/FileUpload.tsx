@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { LanguageSelector } from './LanguageSelector';
 
 interface FileUploadProps {
-  onFileSelect: (files: File[]) => void;
+  onFileSelect: (file: File) => void;
   targetLanguage: string;
   onLanguageChange: (lang: string) => void;
 }
@@ -12,7 +12,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, targetLang
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      onFileSelect(Array.from(e.target.files));
+      onFileSelect(e.target.files[0]);
     }
   };
 
@@ -32,9 +32,9 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, targetLang
               </svg>
             </div>
             <div>
-                <h3 className="text-xl font-medium text-slate-200">Upload SRT Files</h3>
+                <h3 className="text-xl font-medium text-slate-200">Upload SRT File</h3>
                 <p className="text-slate-500 text-sm max-w-xs mt-2">
-                    Select multiple .srt files to automatically translate them concurrently.
+                    Select an .srt file to automatically translate it.
                 </p>
             </div>
           </div>
@@ -49,7 +49,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, targetLang
                 onClick={() => inputRef.current?.click()}
                 className="w-full px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium text-sm transition-colors shadow-lg shadow-indigo-500/20"
             >
-                Select Files
+                Select File
             </button>
           </div>
 
@@ -59,7 +59,6 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, targetLang
             onChange={handleChange} 
             accept=".srt" 
             className="hidden" 
-            multiple
           />
         </div>
       </div>
