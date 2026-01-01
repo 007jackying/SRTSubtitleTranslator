@@ -17,7 +17,7 @@ export const Header: React.FC<HeaderProps> = ({ onClearKey }) => {
           </h1>
         </div>
         <div className="flex items-center gap-4 text-sm text-slate-400">
-          <span className="hidden sm:inline">Powered by Gemini 3 Pro</span>
+          <span className="hidden sm:inline">Powered by Google Gemini</span>
           {onClearKey && (
             <button 
               onClick={onClearKey}

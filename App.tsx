@@ -3,6 +3,7 @@ import { Header } from './components/Header';
 import { FileUpload } from './components/FileUpload';
 import { JobCard } from './components/JobCard';
 import { ApiKeyInput } from './components/ApiKeyInput';
+import { ConsolePopup } from './components/ConsolePopup';
 import { parseSRT } from './utils/srtParser';
 import { translateBatch } from './services/geminiService';
 import { SubtitleItem, FileJob, JobStatus } from './types';
@@ -13,6 +14,11 @@ function App() {
   const [job, setJob] = useState<FileJob | null>(null);
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [targetLanguage, setTargetLanguage] = useState<string>('Simplified Chinese');
+  const [selectedModel, setSelectedModel] = useState<string>('gemini-3-pro-preview');
+  
+  // Console State
+  const [logs, setLogs] = useState<string[]>([]);
+  const [isConsoleOpen, setIsConsoleOpen] = useState(false);
   
   const stopRef = useRef(false);
 
@@ -23,6 +29,12 @@ function App() {
     }
   }, []);
 
+  const addLog = (message: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    setLogs(prev => [`[${timestamp}] ${message}`, ...prev]);
+    setIsConsoleOpen(true); // Auto-open on error
+  };
+
   const handleSaveKey = (key: string) => {
     localStorage.setItem('gemini_api_key', key);
     setApiKey(key);
@@ -32,10 +44,12 @@ function App() {
     localStorage.removeItem('gemini_api_key');
     setApiKey(null);
     setJob(null);
+    setLogs([]);
   };
 
   const handleFileSelect = (file: File) => {
     stopRef.current = false;
+    setLogs([]); // Clear logs for new run
     const newJob: FileJob = {
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       file,
@@ -44,7 +58,8 @@ function App() {
       subtitles: [],
       progress: 0,
       currentLineId: 0,
-      targetLanguage: targetLanguage
+      targetLanguage: targetLanguage,
+      model: selectedModel
     };
 
     setJob(newJob);
@@ -73,6 +88,7 @@ function App() {
   const handleStop = () => {
     stopRef.current = true;
     updateJobState({ status: JobStatus.STOPPED });
+    addLog('User stopped the process.');
   };
 
   const updateJobState = (updates: Partial<FileJob>) => {
@@ -81,7 +97,10 @@ function App() {
 
   const startJob = async (currentJob: FileJob) => {
     const key = localStorage.getItem('gemini_api_key');
-    if (!key) return;
+    if (!key) {
+        addLog('Missing API Key.');
+        return;
+    }
 
     // 1. Parsing Phase
     updateJobState({ status: JobStatus.PARSING });
@@ -95,25 +114,35 @@ function App() {
 
       const content = e.target?.result as string;
       if (content) {
-        const parsed = parseSRT(content);
-        updateJobState({ 
-            status: JobStatus.TRANSLATING, 
-            subtitles: parsed 
-        });
-        
-        // 2. Translating Phase
-        await processTranslationLoop(currentJob.id, parsed, key, currentJob.targetLanguage);
+        try {
+            const parsed = parseSRT(content);
+            if (parsed.length === 0) {
+                throw new Error("Parsed SRT has 0 subtitles.");
+            }
+            updateJobState({ 
+                status: JobStatus.TRANSLATING, 
+                subtitles: parsed 
+            });
+            
+            // 2. Translating Phase
+            await processTranslationLoop(currentJob.id, parsed, key, currentJob.targetLanguage, currentJob.model);
+        } catch (parseError: any) {
+            updateJobState({ status: JobStatus.ERROR, error: 'File parsing failed' });
+            addLog(`Parsing Error: ${parseError.message || parseError}`);
+        }
       } else {
         updateJobState({ status: JobStatus.ERROR, error: 'Empty file' });
+        addLog('Error: Uploaded file is empty.');
       }
     };
     reader.onerror = () => {
         updateJobState({ status: JobStatus.ERROR, error: 'Failed to read file' });
+        addLog('FileReader Error: Failed to read the file content.');
     };
     reader.readAsText(currentJob.file);
   };
 
-  const processTranslationLoop = async (jobId: string, items: SubtitleItem[], apiKey: string, lang: string) => {
+  const processTranslationLoop = async (jobId: string, items: SubtitleItem[], apiKey: string, lang: string, model: string) => {
     let processedCount = 0;
     const total = items.length;
     const localItems = [...items];
@@ -137,7 +166,7 @@ function App() {
       const textsToTranslate = batch.map(b => b.originalText);
       
       try {
-        const translations = await translateBatch(textsToTranslate, apiKey, lang);
+        const translations = await translateBatch(textsToTranslate, apiKey, lang, model);
         
         for (let j = 0; j < batch.length; j++) {
            const originalIndex = i + j;
@@ -162,12 +191,23 @@ function App() {
             return prev;
         });
 
-      } catch (err) {
+      } catch (err: any) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
         console.error(`Batch failed for job ${jobId}`, err);
+        
+        // Log to Console Popup
+        addLog(`Request Failed [Lines ${batch[0].id}-${batch[batch.length-1].id}]: ${errorMsg}`);
+        
+        // Update Job Status to ERROR to stop spinners
+        updateJobState({ status: JobStatus.ERROR, error: errorMsg });
+        
+        // Stop the loop on API error
+        stopRef.current = true;
+        break;
       }
     }
 
-    if (!stopRef.current) {
+    if (!stopRef.current && job?.status !== JobStatus.ERROR) {
         updateJobState({ status: JobStatus.COMPLETED, progress: 100 });
     }
   };
@@ -175,7 +215,7 @@ function App() {
   const isProcessing = job?.status === JobStatus.TRANSLATING || job?.status === JobStatus.PARSING || job?.status === JobStatus.PENDING;
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col pb-20"> {/* pb-20 for bottom space if console is open */}
       <Header onClearKey={apiKey ? handleClearKey : undefined} />
       
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -199,7 +239,19 @@ function App() {
                   onFileSelect={handleFileSelect} 
                   targetLanguage={targetLanguage}
                   onLanguageChange={setTargetLanguage}
+                  selectedModel={selectedModel}
+                  onModelChange={setSelectedModel}
                 />
+                
+                {/* Console Toggle for Idle State if there are logs from previous run */}
+                {logs.length > 0 && (
+                   <button 
+                     onClick={() => setIsConsoleOpen(true)}
+                     className="mt-8 text-sm text-slate-500 hover:text-slate-300 underline"
+                   >
+                     View Previous Logs
+                   </button>
+                )}
               </div>
             ) : (
               <div className="space-y-8 animate-fade-in-up">
@@ -208,9 +260,18 @@ function App() {
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
                     <div>
                         <h2 className="text-xl font-bold text-white">Translation</h2>
-                        <p className="text-sm text-slate-400">
-                           {job.status === JobStatus.COMPLETED ? 'Completed' : 'Processing...'}
-                        </p>
+                        <div className="flex items-center gap-2">
+                            <p className="text-sm text-slate-400">
+                                {job.status === JobStatus.COMPLETED ? 'Completed' : job.status === JobStatus.ERROR ? 'Failed' : 'Processing...'}
+                            </p>
+                            {/* Toggle Console Button */}
+                            <button 
+                                onClick={() => setIsConsoleOpen(!isConsoleOpen)}
+                                className="text-xs px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded border border-slate-700"
+                            >
+                                {isConsoleOpen ? 'Hide Console' : 'Show Console'}
+                            </button>
+                        </div>
                     </div>
                     <div className="flex items-center gap-3">
                          {isProcessing && (
@@ -244,6 +305,13 @@ function App() {
           </>
         )}
       </main>
+
+      <ConsolePopup 
+        logs={logs} 
+        isOpen={isConsoleOpen} 
+        onClose={() => setIsConsoleOpen(false)}
+        onClear={() => setLogs([])}
+      />
     </div>
   );
 }

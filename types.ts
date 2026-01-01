@@ -30,6 +30,7 @@ export interface FileJob {
   progress: number;
   currentLineId: number;
   targetLanguage: string;
+  model: string;
   error?: string;
 }
 

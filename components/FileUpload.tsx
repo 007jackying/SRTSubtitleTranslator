@@ -1,13 +1,22 @@
 import React, { useRef } from 'react';
 import { LanguageSelector } from './LanguageSelector';
+import { ModelSelector } from './ModelSelector';
 
 interface FileUploadProps {
   onFileSelect: (file: File) => void;
   targetLanguage: string;
   onLanguageChange: (lang: string) => void;
+  selectedModel: string;
+  onModelChange: (model: string) => void;
 }
 
-export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, targetLanguage, onLanguageChange }) => {
+export const FileUpload: React.FC<FileUploadProps> = ({ 
+  onFileSelect, 
+  targetLanguage, 
+  onLanguageChange,
+  selectedModel,
+  onModelChange 
+}) => {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -39,12 +48,17 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, targetLang
             </div>
           </div>
 
-          <div className="w-full max-w-xs border-t border-slate-800 pt-6">
-            <LanguageSelector 
-                value={targetLanguage} 
-                onChange={onLanguageChange} 
-                className="mb-4"
-            />
+          <div className="w-full max-w-md border-t border-slate-800 pt-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <LanguageSelector 
+                  value={targetLanguage} 
+                  onChange={onLanguageChange} 
+              />
+              <ModelSelector
+                  value={selectedModel}
+                  onChange={onModelChange}
+              />
+            </div>
             <button 
                 onClick={() => inputRef.current?.click()}
                 className="w-full px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium text-sm transition-colors shadow-lg shadow-indigo-500/20"
