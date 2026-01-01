@@ -35,14 +35,14 @@ const SubtitleRow = memo(({ item, isCurrent, onUpdate }: {
       <div className="col-span-4 md:col-span-4 text-slate-300 pr-2 whitespace-pre-wrap leading-relaxed select-text">
         {item.originalText}
       </div>
-      <div className="col-span-5 md:col-span-5 relative">
+      <div className="col-span-5 md:col-span-5 relative group">
         {isDone ? (
              <textarea
-                className="w-full h-full bg-transparent text-indigo-200 resize-none focus:outline-none focus:bg-slate-800/50 focus:ring-1 focus:ring-indigo-500/50 rounded px-2 py-1 transition-all leading-relaxed"
+                className="w-full h-full bg-transparent text-indigo-200 resize-none focus:outline-none focus:bg-slate-800/50 focus:ring-1 focus:ring-indigo-500/50 rounded px-2 py-1 transition-all leading-relaxed hover:bg-slate-800/20 cursor-text"
                 value={item.translatedText || ''}
                 onChange={(e) => onUpdate(item.id, e.target.value)}
                 rows={calculateRows(item.translatedText || item.originalText)}
-                placeholder="Translation..."
+                placeholder="Click to edit translation..."
                 spellCheck={false}
              />
         ) : (

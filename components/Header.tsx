@@ -10,14 +10,14 @@ export const Header: React.FC<HeaderProps> = ({ onClearKey }) => {
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold">
-            G
+            AI
           </div>
           <h1 className="text-xl font-semibold text-slate-100 tracking-tight">
-            Gemini <span className="text-indigo-400">SRT Translator</span>
+            AI <span className="text-indigo-400">SRT Translator</span>
           </h1>
         </div>
         <div className="flex items-center gap-4 text-sm text-slate-400">
-          <span className="hidden sm:inline">Powered by Google Gemini</span>
+          <span className="hidden sm:inline">Powered by GenAI</span>
           {onClearKey && (
             <button 
               onClick={onClearKey}

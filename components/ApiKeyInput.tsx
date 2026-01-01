@@ -25,9 +25,9 @@ export const ApiKeyInput: React.FC<ApiKeyInputProps> = ({ onSave }) => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                 </svg>
             </div>
-            <h2 className="text-xl font-bold text-white mb-2">Enter Gemini API Key</h2>
+            <h2 className="text-xl font-bold text-white mb-2">Enter API Key</h2>
             <p className="text-sm text-slate-400 leading-relaxed">
-                To start translating, please provide your Google Gemini API key. It will be stored securely in your browser's local storage.
+                To start translating, please provide your API key. It will be stored securely in your browser's local storage.
             </p>
         </div>
         
@@ -56,7 +56,7 @@ export const ApiKeyInput: React.FC<ApiKeyInputProps> = ({ onSave }) => {
                 rel="noreferrer"
                 className="text-xs text-indigo-400 hover:text-indigo-300 hover:underline transition-colors"
             >
-                Get an API Key from Google AI Studio &rarr;
+                Get API Key from AI Studio &rarr;
             </a>
         </div>
       </div>
